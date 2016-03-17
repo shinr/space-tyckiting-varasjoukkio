@@ -17,6 +17,12 @@ class Ai(base.BaseAi):
     is considered ancients and returned into uncharted node set.
     """
     game_map = {}
+
+
+
+    def __init__(self, team_id, config=None):
+        base.BaseAi.__init__(self, team_id, config=config)
+
     """
     Dummy bot that moves randomly around the board.
     """
@@ -42,3 +48,14 @@ class Ai(base.BaseAi):
                                          x=move_pos.x,
                                          y=move_pos.y))
         return response
+
+
+    def generate_map(self):
+        try:
+            for i in xrange(self.config.field_radius):
+                pass
+        except:
+            raise
+
+
+        
