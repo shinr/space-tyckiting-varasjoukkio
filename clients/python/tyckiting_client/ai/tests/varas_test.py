@@ -17,7 +17,9 @@ class VarasAiTest(unittest.TestCase):
         self.ai = varasjoukkio_v2.Ai(1, messages.Config())
         self.ai.generate_map()
         space_map = self.ai.game_map
-        expected_map = set()
+        expected_map = set((
+            
+            ))
         self.assertEqual(space_map)
 
     def test_get_positions_in_origo_range(self):
