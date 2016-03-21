@@ -40,6 +40,7 @@ class Ai(base.BaseAi):
     bots_inactive = 0
     bot_modes = []
     modes = Modes()
+    scan_for_remains = False
     def __init__(self, team_id, config=None):
         base.BaseAi.__init__(self, team_id, config=config)
         if config:
@@ -60,28 +61,42 @@ class Ai(base.BaseAi):
             List of actions to perform this round.
         """
         for ev in events:
-            print ev.event
             if ev.event == "see":
                 self.enemy_position = Node(ev.pos.x, ev.pos.y)
                 self.enemy_sighted = True
             if ev.event == "radarEcho":
                 self.enemy_position = Node(ev.pos.x, ev.pos.y)
                 self.enemy_sighted = True
+            if ev.event == "die":
+                if self.scan_for_remains:
+                    if not ev.botId in [bot.bot_id for bot in bots]:
+                        self.scan_for_remains = False # guess we killed it
 
         response = []
         for bot in bots:
             if not bot.alive:
                 continue
-
+"""
             if "detected" in events:
                 print "i was detected"
-
+"""
             move_pos = random.choice(list(self.get_valid_moves(bot)))
             action = actions.Move(bot_id=bot.bot_id,
                                          x=move_pos.x,
                                          y=move_pos.y)
+            """
+                scan if we fired
+                if not, shoot if enemy has been enemy_sighted
+                if not, scan if we're the scanner
+                otherwise, move
+            """
+            if self.scan_for_remains:
+                target_x = self.enemy_position.x + random.choice([self.config.radar, -self.config.radar])
+                target_y = self.enemy_position.y + random.choice([self.config.radar, -self.config.radar])
+                action = actions.Radar(bot_id=bot.bot_id, x=target_x, y=target_y)
+                self.scan_for_remains = False
 
-            if self.enemy_sighted:
+            elif self.enemy_sighted:  
                 target_x = self.enemy_position.x + random.choice([self.config.cannon, -self.config.cannon])
                 target_y = self.enemy_position.y + random.choice([self.config.cannon, -self.config.cannon])
                 action = actions.Cannon(bot_id=bot.bot_id, x=target_x, y=target_y)
@@ -96,9 +111,9 @@ class Ai(base.BaseAi):
             response.append(action)
 
         if self.enemy_sighted and self.volley_fired:
+            self.scan_for_remains = True
             self.enemy_sighted = False
             self.volley_fired = False
-            self.enemy_position = None
 
         return response
 
