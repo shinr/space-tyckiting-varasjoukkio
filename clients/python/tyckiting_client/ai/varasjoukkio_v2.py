@@ -1,4 +1,4 @@
-import random
+import random, math
 
 from tyckiting_client.ai import base
 from tyckiting_client import actions
@@ -75,11 +75,13 @@ class Ai(base.BaseAi):
         response = []
         for bot in bots:
             if not bot.alive:
+                if self.current_scanner == bot.bot_id:
+                    self.current_scanner = random.choice([bot.bot_id for bot in bots if bot.alive])
                 continue
-"""
+            """
             if "detected" in events:
                 print "i was detected"
-"""
+            """
             move_pos = random.choice(list(self.get_valid_moves(bot)))
             action = actions.Move(bot_id=bot.bot_id,
                                          x=move_pos.x,
@@ -91,8 +93,9 @@ class Ai(base.BaseAi):
                 otherwise, move
             """
             if self.scan_for_remains:
-                target_x = self.enemy_position.x + random.choice([self.config.radar, -self.config.radar])
-                target_y = self.enemy_position.y + random.choice([self.config.radar, -self.config.radar])
+                distance = math.floor(self.config.radar / 2)
+                target_x = self.enemy_position.x + random.choice([distance, -distance])
+                target_y = self.enemy_position.y + random.choice([distance, -distance])
                 action = actions.Radar(bot_id=bot.bot_id, x=target_x, y=target_y)
                 self.scan_for_remains = False
 
@@ -104,7 +107,7 @@ class Ai(base.BaseAi):
             
             elif self.current_scanner == bot.bot_id or self.current_scanner < 0:
                 node = self.game_map["uncharted"].pop()
-                self.current_scanner = random.choice([b.bot_id for b in bots if bot.alive])
+                self.current_scanner = random.choice([b.bot_id for b in bots if b.alive])
                 action = actions.Radar(bot_id=bot.bot_id, x=node.x, y=node.y)
                 self.game_map["uncharted"].insert(0, node)
 
