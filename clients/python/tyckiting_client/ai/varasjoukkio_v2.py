@@ -90,7 +90,7 @@ class Ai(base.BaseAi):
             elif self.current_scanner == bot.bot_id or self.current_scanner < 0:
                 node = self.game_map["uncharted"].pop()
                 self.current_scanner = random.choice([b.bot_id for b in bots if bot.alive])
-                action = actions.Radar(bot_id=bot.bot_id, x=node.x, node.y)
+                action = actions.Radar(bot_id=bot.bot_id, x=node.x, y=node.y)
                 self.game_map["uncharted"].insert(node)
 
             response.append(action)
