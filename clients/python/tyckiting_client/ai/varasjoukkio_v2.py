@@ -91,7 +91,7 @@ class Ai(base.BaseAi):
                 node = self.game_map["uncharted"].pop()
                 self.current_scanner = random.choice([b.bot_id for b in bots if bot.alive])
                 action = actions.Radar(bot_id=bot.bot_id, x=node.x, y=node.y)
-                self.game_map["uncharted"].insert(node)
+                self.game_map["uncharted"].insert(0, node)
 
             response.append(action)
 
@@ -107,10 +107,9 @@ class Ai(base.BaseAi):
         self.game_map["uncharted"] = list()
         self.game_map["charted"] = list()
         try:
-            for x in xrange(-self.config.field_radius + self.config.radar, self.config.field_radius + 1, self.config.radar):
-                for y in xrange(max(-self.config.field_radius + self.config.radar, -x-self.config.field_radius + self.config.radar), min(self.config.field_radius - self.config.radar, -x+self.config.field_radius) + 1, self.config.radar):
+            for x in xrange(-self.config.field_radius, self.config.field_radius + 1, self.config.radar):
+                for y in xrange(max(-self.config.field_radius, -x-self.config.field_radius + self.config.radar), min(self.config.field_radius - self.config.radar, -x+self.config.field_radius) + 1, self.config.radar):
                     self.game_map["uncharted"].append(Node(x=x, y=y))
-            print self.game_map
         except AttributeError:
             raise
 
