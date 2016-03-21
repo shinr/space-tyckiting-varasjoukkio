@@ -59,7 +59,7 @@ class Ai(base.BaseAi):
         Returns:
             List of actions to perform this round.
         """
-        for ev in events.events:
+        for ev in events:
             print ev.event
             if ev.event == "see":
                 self.enemy_position = Node(ev.pos.x, ev.pos.y)
@@ -73,7 +73,7 @@ class Ai(base.BaseAi):
             if not bot.alive:
                 continue
 
-            if "detected" in events.events:
+            if "detected" in events:
                 print "i was detected"
 
             move_pos = random.choice(list(self.get_valid_moves(bot)))
