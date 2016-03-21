@@ -31,7 +31,8 @@ class Ai(base.BaseAi):
     is considered ancients and returned into uncharted node set.
     """
     game_map = {}
-    current_scanner = -1
+    current_scanners = []
+    scanners = 2
     enemy_sighted = False
     enemy_position = None
     volley_fired = False
@@ -41,6 +42,7 @@ class Ai(base.BaseAi):
     bot_modes = []
     modes = Modes()
     scan_for_remains = False
+    set_scanners = False
     def __init__(self, team_id, config=None):
         base.BaseAi.__init__(self, team_id, config=config)
         if config:
@@ -60,6 +62,8 @@ class Ai(base.BaseAi):
         Returns:
             List of actions to perform this round.
         """
+        alive_bots = [bot.bot_id for bot in bots if bot.alive]
+
         for ev in events:
             if ev.event == "see":
                 self.enemy_position = Node(ev.pos.x, ev.pos.y)
@@ -71,12 +75,25 @@ class Ai(base.BaseAi):
                 if self.scan_for_remains:
                     if not ev.botId in [bot.bot_id for bot in bots]:
                         self.scan_for_remains = False # guess we killed it
+            if ev.event == "detected":
+                if ev.botId in [bot.bot_id for bot in bots]:
+                    self.scanners = 1
+
+        if len(alive_bots) > 1:
+            self.scanners = len(alive_bots) - 1
+
+        potential_scanners = alive_bots
+        for i in range(self.scanners):
+            new_scanner = random.choice(potential_scanners)
+            self.current_scanners.append(new_scanner)
+            potential_scanners.remove(new_scanner)
+
 
         response = []
         for bot in bots:
             if not bot.alive:
                 if self.current_scanner == bot.bot_id:
-                    self.current_scanner = random.choice([bot.bot_id for bot in bots if bot.alive])
+                    self.current_scanner = random.choice(alive_bots)
                 continue
             """
             if "detected" in events:
@@ -105,9 +122,8 @@ class Ai(base.BaseAi):
                 action = actions.Cannon(bot_id=bot.bot_id, x=target_x, y=target_y)
                 self.volley_fired = True
             
-            elif self.current_scanner == bot.bot_id or self.current_scanner < 0:
+            elif bot.bot_id in self.current_scanners or not self.current_scanners:
                 node = self.game_map["uncharted"].pop()
-                self.current_scanner = random.choice([b.bot_id for b in bots if b.alive])
                 action = actions.Radar(bot_id=bot.bot_id, x=node.x, y=node.y)
                 self.game_map["uncharted"].insert(0, node)
 
