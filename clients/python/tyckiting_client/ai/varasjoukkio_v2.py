@@ -82,8 +82,8 @@ class Ai(base.BaseAi):
                                          y=move_pos.y)
 
             if self.enemy_sighted:
-                target_x = self.enemy_position.x + self.firing_offset
-                target_y = self.enemy_position.y + self.firing_offset
+                target_x = self.enemy_position.x + random.choice([self.config.cannon, -self.config.cannon])
+                target_y = self.enemy_position.y + random.choice([self.config.cannon, -self.config.cannon])
                 action = actions.Cannon(bot_id=bot.bot_id, x=target_x, y=target_y)
                 self.volley_fired = True
             
