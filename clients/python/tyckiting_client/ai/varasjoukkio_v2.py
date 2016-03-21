@@ -12,6 +12,11 @@ class Node(object):
         self.x = x
         self.y = y
 
+class Modes(object):
+    ESCAPE = 0
+    ROAM = 1
+    BATTLE = 2
+
 
 class Ai(base.BaseAi):
     """
@@ -33,6 +38,8 @@ class Ai(base.BaseAi):
     reversed_x = False
     firing_offset = 0
     bots_inactive = 0
+    bot_modes = []
+    modes = Modes()
     def __init__(self, team_id, config=None):
         base.BaseAi.__init__(self, team_id, config=config)
         if config:
@@ -52,28 +59,47 @@ class Ai(base.BaseAi):
         Returns:
             List of actions to perform this round.
         """
+        for ev in events.events:
+            print ev.event
+            if ev.event == "see":
+                self.enemy_position = Node(ev.pos.x, ev.pos.y)
+                self.enemy_sighted = True
+            if ev.event == "radarEcho":
+                self.enemy_position = Node(ev.pos.x, ev.pos.y)
+                self.enemy_sighted = True
+
         response = []
         for bot in bots:
             if not bot.alive:
                 continue
 
-            if self.enemy_sighted:
-                self.volley_fired = True
-                target_x = self.enemy_position.x + firing_offset
-                target_y = self.enemy_position.y + firing_offset
-                response.append(actions.Cannon(bot_id=bot.bot_id, x=target_x, y=target_y))
-
-            if self.current_scanner = bot.bot_id:
-                node = self.game_map
+            if "detected" in events.events:
+                print "i was detected"
 
             move_pos = random.choice(list(self.get_valid_moves(bot)))
-            response.append(actions.Move(bot_id=bot.bot_id,
+            action = actions.Move(bot_id=bot.bot_id,
                                          x=move_pos.x,
-                                         y=move_pos.y))
+                                         y=move_pos.y)
+
+            if self.enemy_sighted:
+                target_x = self.enemy_position.x + firing_offset
+                target_y = self.enemy_position.y + firing_offset
+                action = actions.Cannon(bot_id=bot.bot_id, x=target_x, y=target_y)
+                self.volley_fired = True
+            
+            elif self.current_scanner == bot.bot_id or self.current_scanner < 0:
+                node = self.game_map["uncharted"].pop()
+                self.current_scanner = random.choice([b.bot_id for b in bots if bot.alive])
+                action = actions.Radar(bot_id=bot.bot_id, x=node.x, node.y)
+                self.game_map["uncharted"].insert(node)
+
+            response.append(action)
+
         if self.enemy_sighted and self.volley_fired:
             self.enemy_sighted = False
             self.volley_fired = False
             self.enemy_position = None
+
         return response
 
 
