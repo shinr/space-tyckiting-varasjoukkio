@@ -13,10 +13,10 @@ class Node(object):
         self.y = y
 
 class Modes(object):
-    ESCAPE = 0
-    ROAM = 1
-    BATTLE = 2
-
+    ROAM = 0
+    BATTLE = 1
+    SEARCH = 2
+    ESCAPE = 3
 
 class Ai(base.BaseAi):
     """
@@ -24,11 +24,7 @@ class Ai(base.BaseAi):
     """
     bots = {}
     """
-    Game Map contains what we know of the world.  It is basically a node tree calculated
-    with map size and scan size.
-    Node can have a state of uncharted or charted.  Node also knows how many turns 
-    ago it was charted.  If the turns ago is greater than a threshold, a node
-    is considered ancients and returned into uncharted node set.
+    Game Map contains what we know of the world.
     """
     game_map = {}
     current_scanners = []
@@ -43,6 +39,7 @@ class Ai(base.BaseAi):
     modes = Modes()
     scan_for_remains = False
     set_scanners = False
+    detection = False
     def __init__(self, team_id, config=None):
         base.BaseAi.__init__(self, team_id, config=config)
         if config:
@@ -63,26 +60,36 @@ class Ai(base.BaseAi):
             List of actions to perform this round.
         """
         alive_bots = [bot.bot_id for bot in bots if bot.alive]
+        if not self.bots:
+            for bot in bots:
+                self.bots["mode"] = Modes.ROAM
 
+        detection = False
         for ev in events:
             if ev.event == "see":
-                self.enemy_position = Node(ev.pos.x, ev.pos.y)
-                self.enemy_sighted = True
+                if not ev.bot_id in alive_bots: # not ours
+                    self.enemy_position = Node(ev.pos.x, ev.pos.y)
+                    self.enemy_sighted = True
             if ev.event == "radarEcho":
                 self.enemy_position = Node(ev.pos.x, ev.pos.y)
                 self.enemy_sighted = True
             if ev.event == "die":
                 if self.scan_for_remains:
-                    if not ev.botId in [bot.bot_id for bot in bots]:
+                    if not ev.bot_id in [bot.bot_id for bot in bots]:
                         self.scan_for_remains = False # guess we killed it
             if ev.event == "detected":
-                if ev.botId in [bot.bot_id for bot in bots]:
-                    self.scanners = 1
+                if ev.bot_id in alive_bots:
+                    self.bots["mode"] = Modes.ESCAPE
+                self.detection = True
 
         if len(alive_bots) > 1:
             self.scanners = len(alive_bots) - 1
 
+        if self.scanners < 1:
+            self.scanners = 1
+
         potential_scanners = alive_bots
+        self.current_scanners = []
         for i in range(self.scanners):
             new_scanner = random.choice(potential_scanners)
             self.current_scanners.append(new_scanner)
@@ -92,8 +99,8 @@ class Ai(base.BaseAi):
         response = []
         for bot in bots:
             if not bot.alive:
-                if self.current_scanner == bot.bot_id:
-                    self.current_scanner = random.choice(alive_bots)
+                if bot.bot_id in self.current_scanners:
+                    pass
                 continue
             """
             if "detected" in events:
@@ -110,7 +117,7 @@ class Ai(base.BaseAi):
                 otherwise, move
             """
             if self.scan_for_remains:
-                distance = math.floor(self.config.radar / 2)
+                distance = math.floor(self.config.move)
                 target_x = self.enemy_position.x + random.choice([distance, -distance])
                 target_y = self.enemy_position.y + random.choice([distance, -distance])
                 action = actions.Radar(bot_id=bot.bot_id, x=target_x, y=target_y)
@@ -140,10 +147,16 @@ class Ai(base.BaseAi):
     def generate_map(self):
         self.game_map["uncharted"] = list()
         self.game_map["charted"] = list()
+        reverse = True
         try:
             for x in xrange(-self.config.field_radius, self.config.field_radius + 1, self.config.radar):
                 for y in xrange(max(-self.config.field_radius, -x-self.config.field_radius + self.config.radar), min(self.config.field_radius - self.config.radar, -x+self.config.field_radius) + 1, self.config.radar):
-                    self.game_map["uncharted"].append(Node(x=x, y=y))
+                    if reverse:
+                        self.game_map["uncharted"].append(Node(x=x, y=y))
+                    else:
+                        self.game_map["uncharted"].insert(0, Node(x=x, y=y))
+                    reverse = not reverse
+                    print reverse,
         except AttributeError:
             raise
 
