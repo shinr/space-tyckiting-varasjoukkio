@@ -1,7 +1,7 @@
 import random, math
 
 from tyckiting_client.ai import base
-from tyckiting_client import actions
+from tyckiting_client import actions, messages
 
 
 class Node(object):
@@ -17,6 +17,11 @@ class Modes(object):
     BATTLE = 1
     SEARCH = 2
     ESCAPE = 3
+
+class BotModes(object):
+    mode = 0
+    mode_timer = 0
+    target_position = None
 
 class Ai(base.BaseAi):
     """
@@ -45,8 +50,54 @@ class Ai(base.BaseAi):
         if config:
             self.generate_map()
 
+    def get_edge_positions_in_range(self, x=0, y=0, radius=1):
+        positions = list()
+        for dx in xrange(-radius, radius+1):
+            for dy in xrange(max(-radius, -dx-radius), min(radius, -dx+radius)+1):
+                if dx == -radius or dx == radius or dy == max(-radius, -dx-radius) or dy == min(radius, -dx+radius):
+                    positions.append(messages.Pos(dx+x, dy+y))
+        return positions    
+                        #yield messages.Pos(dx+x, dy+y)
+
+    def escape(self, bot):
+        positions = self.get_edge_positions_in_range(bot.pos.x, bot.pos.y, self.config.move)
+        tentative_position = bot.pos
+        for pos in positions:
+            if self.bots[bot.bot_id].target_position.x < bot.pos.x:
+                if self.bots[bot.bot_id].target_position.y < bot.pos.y:
+                    if pos.x < bot.pos.x and pos.y < bot.pos.y:
+                        tentative_position = pos
+                else:
+                    if pos.x < bot.pos.x and pos.y > bot.pos.y:
+                        tentative_position = pos
+            else:
+                if self.bots[bot.bot_id].target_position.y < bot.pos.y:
+                    if pos.x > bot.pos.x and pos.y < bot.pos.y:
+                        tentative_position = pos
+                else:
+                    if pos.x > bot.pos.x and pos.y > bot.pos.y:
+                        tentative_position = pos
+        move_pos = tentative_position
+        #print move_pos, bot.pos, self.bots[bot.bot_id].target_position.x, self.bots[bot.bot_id].target_position.y
+        action = actions.Move(bot_id=bot.bot_id,            
+                                     x=move_pos.x,
+                                     y=move_pos.y)
+        self.bots[bot.bot_id].mode_timer -= 1
+        if self.bots[bot.bot_id].mode_timer < 0:
+            self.bots[bot.bot_id].mode_timer = 0
+            self.bots[bot.bot_id].mode = Modes.ROAM
+        return action
+
+    def find_legal_escape_node(self, bot):
+        target_x = 0
+        target_y = 0
+        pos =  random.choice(self.get_edge_positions_in_range(bot.pos.x, bot.pos.y, self.config.move * 5))
+        target_x, target_y = pos.x, pos.y
+        print "moving to ", target_x, ", " , target_y
+        return Node(x=target_x, y=target_y)
+
     """
-    Dummy bot that moves randomly around the board.
+    Intelligent bot that destroys all opponents
     """
     def move(self, bots, events):
         """
@@ -62,7 +113,7 @@ class Ai(base.BaseAi):
         alive_bots = [bot.bot_id for bot in bots if bot.alive]
         if not self.bots:
             for bot in bots:
-                self.bots["mode"] = Modes.ROAM
+                self.bots[bot.bot_id] = BotModes()
 
         detection = False
         for ev in events:
@@ -79,8 +130,19 @@ class Ai(base.BaseAi):
                         self.scan_for_remains = False # guess we killed it
             if ev.event == "detected":
                 if ev.bot_id in alive_bots:
-                    self.bots["mode"] = Modes.ESCAPE
-                self.detection = True
+                    if not self.enemy_sighted: # if enemy has been sighted, let's just fight.  if not, escape
+                        for b in bots:
+                            if b.bot_id == ev.bot_id:
+                                self.bots[b.bot_id].mode = Modes.ESCAPE
+                                self.bots[b.bot_id].mode_timer = 5 # ESCAPE for five turns
+                                self.bots[b.bot_id].target_position = self.find_legal_escape_node(b)
+            if ev.event == "damaged" and ev.bot_id in alive_bots:
+                for b in bots:
+                    if b.bot_id == ev.bot_id:
+                        self.bots[b.bot_id].mode = Modes.ESCAPE
+                        self.bots[b.bot_id].mode_timer = 5 # ESCAPE for five turns
+                        self.bots[b.bot_id].target_position = self.find_legal_escape_node(b)
+
 
         if len(alive_bots) > 1:
             self.scanners = len(alive_bots) - 1
@@ -102,10 +164,12 @@ class Ai(base.BaseAi):
                 if bot.bot_id in self.current_scanners:
                     pass
                 continue
-            """
-            if "detected" in events:
-                print "i was detected"
-            """
+            #print self.bots[bot.bot_id].mode
+            if self.bots[bot.bot_id].mode == Modes.ESCAPE:
+                action = self.escape(bot)
+                response.append(action)
+                continue
+            
             move_pos = random.choice(list(self.get_valid_moves(bot)))
             action = actions.Move(bot_id=bot.bot_id,
                                          x=move_pos.x,
