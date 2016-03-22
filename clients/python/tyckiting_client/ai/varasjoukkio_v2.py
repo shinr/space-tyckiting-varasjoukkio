@@ -55,11 +55,16 @@ class Ai(base.BaseAi):
         for dx in xrange(-radius, radius+1):
             for dy in xrange(max(-radius, -dx-radius), min(radius, -dx+radius)+1):
                 if dx == -radius or dx == radius or dy == max(-radius, -dx-radius) or dy == min(radius, -dx+radius):
-                    positions.append(messages.Pos(dx+x, dy+y))
+                    if math.sqrt((dx+x)**2 + (dy+y)**2) < self.config.field_radius:
+                        positions.append(messages.Pos(dx+x, dy+y))
+        print len(positions)
         return positions    
                         #yield messages.Pos(dx+x, dy+y)
 
     def escape(self, bot):
+        zigzag = False
+        if self.bots[bot.bot_id].mode_timer % 2 == 0:
+            zigzag = True
         positions = self.get_edge_positions_in_range(bot.pos.x, bot.pos.y, self.config.move)
         tentative_position = bot.pos
         for pos in positions:
@@ -78,6 +83,21 @@ class Ai(base.BaseAi):
                     if pos.x > bot.pos.x and pos.y > bot.pos.y:
                         tentative_position = pos
         move_pos = tentative_position
+        if zigzag:
+            adjust = Node()
+            yofs = abs(move_pos.y - bot.pos.y)
+            xofs = abs(move_pos.x - bot.pos.x)
+            if xofs > yofs:
+                if move_pos.y < bot.pos.y:
+                    adjust.y += yofs * 2
+                else:
+                    adjust.y -= yofs * 2
+            else:
+                if move_pos.x < bot.pos.x:
+                    adjust.x += xofs * 2
+                else:
+                    adjust.x -= xofs * 2
+            move_pos = messages.Pos(move_pos.x + adjust.x, move_pos.y + adjust.y)
         #print move_pos, bot.pos, self.bots[bot.bot_id].target_position.x, self.bots[bot.bot_id].target_position.y
         action = actions.Move(bot_id=bot.bot_id,            
                                      x=move_pos.x,
@@ -91,7 +111,7 @@ class Ai(base.BaseAi):
     def find_legal_escape_node(self, bot):
         target_x = 0
         target_y = 0
-        pos =  random.choice(self.get_edge_positions_in_range(bot.pos.x, bot.pos.y, self.config.move * 5))
+        pos =  random.choice(self.get_edge_positions_in_range(bot.pos.x, bot.pos.y, self.config.move * self.bots[bot.bot_id].mode_timer))
         target_x, target_y = pos.x, pos.y
         print "moving to ", target_x, ", " , target_y
         return Node(x=target_x, y=target_y)
@@ -134,13 +154,13 @@ class Ai(base.BaseAi):
                         for b in bots:
                             if b.bot_id == ev.bot_id:
                                 self.bots[b.bot_id].mode = Modes.ESCAPE
-                                self.bots[b.bot_id].mode_timer = 5 # ESCAPE for five turns
+                                self.bots[b.bot_id].mode_timer = 3 # ESCAPE for five turns
                                 self.bots[b.bot_id].target_position = self.find_legal_escape_node(b)
             if ev.event == "damaged" and ev.bot_id in alive_bots:
                 for b in bots:
                     if b.bot_id == ev.bot_id:
                         self.bots[b.bot_id].mode = Modes.ESCAPE
-                        self.bots[b.bot_id].mode_timer = 5 # ESCAPE for five turns
+                        self.bots[b.bot_id].mode_timer = 3 # ESCAPE for five turns
                         self.bots[b.bot_id].target_position = self.find_legal_escape_node(b)
 
 
