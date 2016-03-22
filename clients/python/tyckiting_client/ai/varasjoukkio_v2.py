@@ -141,6 +141,8 @@ class Ai(base.BaseAi):
                 if not ev.bot_id in alive_bots: # not ours
                     self.enemy_position = Node(ev.pos.x, ev.pos.y)
                     self.enemy_sighted = True
+                    if ev.source in alive_bots:
+                        self.bots[ev.source].mode = Modes.ESCAPE
             if ev.event == "radarEcho":
                 self.enemy_position = Node(ev.pos.x, ev.pos.y)
                 self.enemy_sighted = True
