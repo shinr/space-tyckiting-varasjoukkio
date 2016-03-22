@@ -157,6 +157,8 @@ class Ai(base.BaseAi):
                         self.game_map["uncharted"].insert(0, Node(x=x, y=y))
                     reverse = not reverse
                     print reverse,
+
+            random.shuffle(self.game_map["uncharted"])
         except AttributeError:
             raise
 
