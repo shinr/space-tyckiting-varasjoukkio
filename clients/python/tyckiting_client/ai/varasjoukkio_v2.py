@@ -71,8 +71,9 @@ class Ai(base.BaseAi):
                     self.enemy_position = Node(ev.pos.x, ev.pos.y)
                     self.enemy_sighted = True
             if ev.event == "radarEcho":
-                self.enemy_position = Node(ev.pos.x, ev.pos.y)
-                self.enemy_sighted = True
+                if not ev.bot_id in alive_bots: # not ours
+                    self.enemy_position = Node(ev.pos.x, ev.pos.y)
+                    self.enemy_sighted = True
             if ev.event == "die":
                 if self.scan_for_remains:
                     if not ev.bot_id in [bot.bot_id for bot in bots]:
@@ -83,7 +84,7 @@ class Ai(base.BaseAi):
                 self.detection = True
 
         if len(alive_bots) > 1:
-            self.scanners = len(alive_bots) - 1
+            self.scanners = len(alive_bots)
 
         if self.scanners < 1:
             self.scanners = 1
