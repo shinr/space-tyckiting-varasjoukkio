@@ -22,6 +22,7 @@ class BotModes(object):
     mode = 0
     mode_timer = 0
     target_position = None
+    scan_counter = 0
 
 class Ai(base.BaseAi):
     """
@@ -45,6 +46,7 @@ class Ai(base.BaseAi):
     scan_for_remains = False
     set_scanners = False
     detection = False
+    scan_counter = 0
     def __init__(self, team_id, config=None):
         base.BaseAi.__init__(self, team_id, config=config)
         if config:
@@ -116,6 +118,9 @@ class Ai(base.BaseAi):
         print "moving to ", target_x, ", " , target_y
         return Node(x=target_x, y=target_y)
 
+    def get_distance(self, bot_1, bot_2):
+        pass
+
     """
     Intelligent bot that destroys all opponents
     """
@@ -143,6 +148,7 @@ class Ai(base.BaseAi):
                     self.enemy_sighted = True
                     if ev.source in alive_bots:
                         self.bots[ev.source].mode = Modes.ESCAPE
+                        self.bots[ev.source].mode_timer = 3
             if ev.event == "radarEcho":
                 self.enemy_position = Node(ev.pos.x, ev.pos.y)
                 self.enemy_sighted = True
@@ -219,7 +225,9 @@ class Ai(base.BaseAi):
                     target_x = self.enemy_position.x + random.choice([distance, -distance])
                     target_y = self.enemy_position.y + random.choice([distance, -distance])
                     action = actions.Radar(bot_id=bot.bot_id, x=target_x, y=target_y)
-                    self.scan_for_remains = False
+                    self.scan_counter -= 1
+                    if self.scan_counter < 0:
+                        self.scan_for_remains = False
 
             elif self.enemy_sighted:  
                 target_x = self.enemy_position.x + random.choice([self.config.cannon, -self.config.cannon])
@@ -238,6 +246,7 @@ class Ai(base.BaseAi):
 
         if self.enemy_sighted and self.volley_fired:
             self.scan_for_remains = True
+            self.scan_counter = 2
             self.enemy_sighted = False
             self.volley_fired = False
 
