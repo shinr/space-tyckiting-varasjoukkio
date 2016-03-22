@@ -145,7 +145,7 @@ class Ai(base.BaseAi):
 
 
         if len(alive_bots) > 1:
-            self.scanners = len(alive_bots) - 1
+            self.scanners = len(alive_bots)
 
         if self.scanners < 1:
             self.scanners = 1
@@ -180,12 +180,24 @@ class Ai(base.BaseAi):
                 if not, scan if we're the scanner
                 otherwise, move
             """
+            
             if self.scan_for_remains:
-                distance = math.floor(self.config.move)
-                target_x = self.enemy_position.x + random.choice([distance, -distance])
-                target_y = self.enemy_position.y + random.choice([distance, -distance])
-                action = actions.Radar(bot_id=bot.bot_id, x=target_x, y=target_y)
-                self.scan_for_remains = False
+                shootAgain = False
+                for ev in events:
+                    if ev.event == "hit" and ev.source == bot.bot_id and ev.bot_id not in alive_bots:
+                        shootAgain = True
+                        break
+
+                if shootAgain:
+                    target_x = self.enemy_position.x + random.choice([self.config.cannon, -self.config.cannon])
+                    target_y = self.enemy_position.y + random.choice([self.config.cannon, -self.config.cannon])
+                    action = actions.Cannon(bot_id=bot.bot_id, x=target_x, y=target_y)
+                else:
+                    distance = math.floor(self.config.move)
+                    target_x = self.enemy_position.x + random.choice([distance, -distance])
+                    target_y = self.enemy_position.y + random.choice([distance, -distance])
+                    action = actions.Radar(bot_id=bot.bot_id, x=target_x, y=target_y)
+                    self.scan_for_remains = False
 
             elif self.enemy_sighted:  
                 target_x = self.enemy_position.x + random.choice([self.config.cannon, -self.config.cannon])
@@ -199,6 +211,8 @@ class Ai(base.BaseAi):
                 self.game_map["uncharted"].insert(0, node)
 
             response.append(action)
+
+        
 
         if self.enemy_sighted and self.volley_fired:
             self.scan_for_remains = True
@@ -221,6 +235,8 @@ class Ai(base.BaseAi):
                         self.game_map["uncharted"].insert(0, Node(x=x, y=y))
                     reverse = not reverse
                     print reverse,
+
+            random.shuffle(self.game_map["uncharted"])
         except AttributeError:
             raise
 
