@@ -148,7 +148,7 @@ class Ai(base.BaseAi):
                     self.enemy_sighted = True
                     if ev.source in alive_bots:
                         self.bots[ev.source].mode = Modes.ESCAPE
-                        self.bots[ev.source].mode_timer = 3
+                        self.bots[ev.source].mode_timer = 2
             if ev.event == "radarEcho":
                 self.enemy_position = Node(ev.pos.x, ev.pos.y)
                 self.enemy_sighted = True
@@ -162,13 +162,13 @@ class Ai(base.BaseAi):
                         for b in bots:
                             if b.bot_id == ev.bot_id:
                                 self.bots[b.bot_id].mode = Modes.ESCAPE
-                                self.bots[b.bot_id].mode_timer = 3 # ESCAPE for five turns
+                                self.bots[b.bot_id].mode_timer = 2 # ESCAPE for five turns
                                 self.bots[b.bot_id].target_position = self.find_legal_escape_node(b)
             if ev.event == "damaged" and ev.bot_id in alive_bots:
                 for b in bots:
                     if b.bot_id == ev.bot_id:
                         self.bots[b.bot_id].mode = Modes.ESCAPE
-                        self.bots[b.bot_id].mode_timer = 3 # ESCAPE for five turns
+                        self.bots[b.bot_id].mode_timer = 2 # ESCAPE for five turns
                         self.bots[b.bot_id].target_position = self.find_legal_escape_node(b)
 
 
@@ -246,7 +246,7 @@ class Ai(base.BaseAi):
 
         if self.enemy_sighted and self.volley_fired:
             self.scan_for_remains = True
-            self.scan_counter = 2
+            self.scan_counter = 4
             self.enemy_sighted = False
             self.volley_fired = False
 
